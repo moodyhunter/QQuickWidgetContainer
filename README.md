@@ -2,6 +2,11 @@
 
 It helps you embed Qt widgets into QML.
 
+## Limitations and Disclaimer
+
+This is a proof-concept of bridging QWidget-based window system and QtQuick, focusing, opacity, z-value and many
+other properties are not supported.
+
 ## Screenshot
 
 ![](screenshots/main.png)
