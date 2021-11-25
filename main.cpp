@@ -4,18 +4,21 @@
 #include <QApplication>
 #include <QQmlApplicationEngine>
 
-class MyWidget
-    : public QWidget
-    , private Ui::Form
+// clang-format off
+class MyWidget : public QWidget, private Ui::Form
 {
-    Q_OBJECT
   public:
-    explicit MyWidget(QWidget *parent = nullptr) : QWidget(parent)
-    {
-        setupUi(this);
-    }
+    explicit MyWidget(QWidget *parent = nullptr) : QWidget(parent) { setupUi(this); }
     virtual ~MyWidget(){};
 };
+// clang-format on
+
+void PopulateWidgetContainer(QObject *qmlRootObject, const QString &objectName, QWidget *instance)
+{
+    auto *item = qmlRootObject->findChild<QQuickWidgetContainer *>(objectName);
+    if (item)
+        item->setupWidget(instance);
+}
 
 int main(int argc, char *argv[])
 {
@@ -25,16 +28,12 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     engine.load(QStringLiteral("qrc:/main.qml"));
-    if (engine.rootObjects().isEmpty())
-        return -1;
 
     const auto roots = engine.rootObjects();
+    if (roots.isEmpty())
+        return -1;
 
-    auto *item = roots.first()->findChild<QQuickWidgetContainer *>(QStringLiteral("myWidget"));
-    if (item)
-        item->setupWidget(new MyWidget);
+    PopulateWidgetContainer(roots.first(), QStringLiteral("myWidget"), new MyWidget);
 
     return app.exec();
 }
-
-#include "main.moc"
