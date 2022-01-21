@@ -3,6 +3,9 @@
 
 #include <QApplication>
 #include <QQmlApplicationEngine>
+#include <QQuickWindow>
+
+using namespace std::chrono_literals;
 
 // clang-format off
 class MyWidget : public QWidget, private Ui::Form
@@ -13,9 +16,9 @@ class MyWidget : public QWidget, private Ui::Form
 };
 // clang-format on
 
-void PopulateWidgetContainer(QObject *qmlRootObject, const QString &objectName, QWidget *instance)
+void PopulateWidgetContainer(QQuickWindow *qmlRootObject, const QString &objectName, QWidget *instance)
 {
-    auto *item = qmlRootObject->findChild<QQuickWidgetContainer *>(objectName);
+    auto *item = qmlRootObject->findChild<QWidgetPrivate *>(objectName);
     if (item)
         item->setupWidget(instance);
 }
@@ -24,7 +27,7 @@ int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
 
-    qmlRegisterType<QQuickWidgetContainer>("com.private", 1, 0, "WidgetContainer");
+    qmlRegisterType<QWidgetPrivate>("com.private", 1, 0, "WidgetContainer");
 
     QQmlApplicationEngine engine;
     engine.load(QStringLiteral("qrc:/main.qml"));
@@ -33,7 +36,8 @@ int main(int argc, char *argv[])
     if (roots.isEmpty())
         return -1;
 
-    PopulateWidgetContainer(roots.first(), QStringLiteral("myWidget"), new MyWidget);
+    const auto first = (QQuickWindow *) engine.rootObjects().first();
+    PopulateWidgetContainer(first, QStringLiteral("myWidget"), new MyWidget);
 
     return app.exec();
 }

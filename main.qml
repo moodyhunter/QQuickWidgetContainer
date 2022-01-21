@@ -21,6 +21,12 @@ ApplicationWindow {
         id: container
         objectName: "myWidget"
         anchors.fill: parent
-        anchors.margins: 50
+        anchors.margins: 0
+        Image {
+            anchors.fill: parent
+            fillMode: Image.PreserveAspectCrop
+            source: "qrc:///background.jpg"
+            anchors.margins: 250
+        }
     }
 }

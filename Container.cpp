@@ -1,62 +1,75 @@
 #include "Container.hpp"
 
+#include <QDateTime>
 #include <QGridLayout>
+#include <QMdiSubWindow>
 #include <QPainter>
 #include <QQuickWindow>
 #include <QTimer>
+#include <private/qwindow_p.h>
 
 using namespace std::chrono_literals;
 
-QQuickWidgetContainer::RenderW::RenderW(QQuickWidgetContainer *parent)
+QWidgetPrivate::RenderW::RenderW(QWidgetPrivate *parent)
 {
     _parent = parent;
     setLayout(new QGridLayout);
     layout()->setSpacing(0);
     layout()->addWidget(parent->contentItem);
     setContentsMargins(0, 0, 0, 0);
-    QTimer::singleShot(100ms, this, qOverload<>(&RenderW::update));
+    //    _parent->contentItem->installEventFilter(this);
+    //    QTimer::singleShot(100ms, this, qOverload<>(&RenderW::update));
+    //    setFocusProxy(_parent->contentItem);
 }
 
-void QQuickWidgetContainer::RenderW::paintEvent(QPaintEvent *)
+bool QWidgetPrivate::RenderW::event(QEvent *event)
 {
-    QPainter painter{ this };
-    const auto position = mapFromParent(pos());
-    const auto &[rx, ry] = std::tuple(position.x(), position.y());
-    painter.drawImage(rx, ry, _parent->window()->grabWindow(), x(), y(), width() - rx, height() - ry);
-    painter.end();
-}
-
-bool QQuickWidgetContainer::RenderW::event(QEvent *event)
-{
-    const auto events = { QEvent::MouseButtonRelease, QEvent::MouseButtonPress, QEvent::MouseButtonDblClick,
-                          QEvent::MouseMove,          QEvent::UpdateRequest,    QEvent::KeyPress,
-                          QEvent::KeyRelease,         QEvent::FocusIn,          QEvent::FocusOut };
-    if (std::find(events.begin(), events.end(), event->type()) != events.end())
-        update();
+    _parent->requestUpdate();
+    qDebug() << QDateTime::currentDateTime() << event;
     return QWidget::event(event);
 }
 
-QQuickWidgetContainer::QQuickWidgetContainer(QQuickItem *parent) : QQuickItem(parent)
+QWidgetPrivate::QWidgetPrivate(QQuickItem *parent) : QQuickPaintedItem(parent)
 {
     setAcceptedMouseButtons(Qt::AllButtons);
     setAcceptHoverEvents(Qt::AllButtons);
     setAcceptTouchEvents(true);
     setFocus(true);
+    QObject::connect(this, &QWidgetPrivate::requestUpdate, this, &QQuickPaintedItem::update);
 }
 
-QQuickWidgetContainer::~QQuickWidgetContainer()
+QWidgetPrivate::~QWidgetPrivate()
 {
-    delete renderer;
 }
 
-void QQuickWidgetContainer::setupWidget(QWidget *widget)
+void QWidgetPrivate::setupWidget(QWidget *widget)
 {
     contentItem = widget;
     renderer = new RenderW(this);
+    renderer->setAttribute(Qt::WA_TranslucentBackground);
+    //    renderer->setAttribute(Qt::WA_WState_Created);
     renderer->setContentsMargins(0, 0, 0, 0);
-    renderer->winId();
-    renderer->windowHandle()->setParent(window());
-    renderer->show();
+    renderer->setVisible(true);
+    renderer->setAttribute(Qt::WA_WState_Created, false);
+    renderer->window()->setVisible(false);
+    renderer->windowHandle()->setVisible(false);
+
+    Q_ASSERT(!contentItem->isWindow());
+    Q_ASSERT(contentItem->parent());
+    Q_ASSERT(contentItem->parentWidget()->isVisible());
+    Q_ASSERT(!contentItem->parentWidget()->testAttribute(Qt::WA_WState_Created));
+
+    if (contentItem->isWindow() || !contentItem->parentWidget() || !contentItem->parentWidget()->isVisible() ||
+        contentItem->parentWidget()->testAttribute(Qt::WA_WState_Created))
+    {
+        Q_ASSERT(false);
+    }
+
+    //    renderer->winId();
+    //    renderer->show();
+    //    renderer->windowHandle()->setParent(window());
+    //    renderer->windowHandle()->setVisible(false);
+    //    installEventFilter(renderer);
 
     const auto resizeToParent = [this]()
     {
@@ -68,9 +81,25 @@ void QQuickWidgetContainer::setupWidget(QWidget *widget)
         renderer->update();
     };
 
-    connect(this, &QQuickWidgetContainer::widthChanged, this, resizeToParent);
-    connect(this, &QQuickWidgetContainer::heightChanged, this, resizeToParent);
-    connect(this, &QQuickWidgetContainer::xChanged, this, resizeToParent);
-    connect(this, &QQuickWidgetContainer::yChanged, this, resizeToParent);
+    connect(this, &QWidgetPrivate::widthChanged, this, resizeToParent);
+    connect(this, &QWidgetPrivate::heightChanged, this, resizeToParent);
+    connect(this, &QWidgetPrivate::xChanged, this, resizeToParent);
+    connect(this, &QWidgetPrivate::yChanged, this, resizeToParent);
     resizeToParent();
+}
+
+bool QWidgetPrivate::event(QEvent *event)
+{
+    if (renderer && renderer->windowHandle())
+    {
+        auto x = QCoreApplication::sendSpontaneousEvent(renderer->windowHandle(), event);
+        update();
+        return x;
+    }
+    return QQuickItem::event(event);
+}
+
+void QWidgetPrivate::paint(QPainter *painter)
+{
+    contentItem->render(painter, {}, {}, QWidget::DrawChildren);
 }

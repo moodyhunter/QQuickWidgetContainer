@@ -2,5 +2,7 @@
     <qresource prefix="/">
         <file>main.qml</file>
         <file>background.jpg</file>
+        <file>Test.qml</file>
+        <file>TestForm.ui.qml</file>
     </qresource>
 </RCC>

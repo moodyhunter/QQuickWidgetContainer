@@ -15,4 +15,4 @@ add_executable(WidgetInQML
     Form.ui
     qml.qrc)
 
-target_link_libraries(WidgetInQML PRIVATE Qt::Core Qt::Quick Qt::Widgets)
+target_link_libraries(WidgetInQML PRIVATE Qt::Core Qt::Quick Qt::Widgets Qt::WidgetsPrivate)

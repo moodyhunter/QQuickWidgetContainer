@@ -4,30 +4,37 @@
 #include <QRasterWindow>
 #include <QWidget>
 
-class QQuickWidgetContainer : public QQuickItem
+class QWidgetPrivate : public QQuickPaintedItem
 {
     Q_OBJECT
 
     class RenderW : public QWidget
     {
       public:
-        explicit RenderW(QQuickWidgetContainer *parent);
+        explicit RenderW(QWidgetPrivate *parent);
         virtual ~RenderW(){};
-
-      protected:
-        virtual void paintEvent(QPaintEvent *e) override;
         virtual bool event(QEvent *event) override;
 
       private:
-        QQuickWidgetContainer *_parent;
+        QWidgetPrivate *_parent;
     };
 
   public:
-    explicit QQuickWidgetContainer(QQuickItem *parent = nullptr);
-    ~QQuickWidgetContainer();
+    explicit QWidgetPrivate(QQuickItem *parent = nullptr);
+    ~QWidgetPrivate();
     void setupWidget(QWidget *widget);
+
+  signals:
+    void requestUpdate(const QRect &rect = QRect());
 
   private:
     QWidget *renderer = nullptr;
     QWidget *contentItem = nullptr;
+
+  public:
+    virtual bool event(QEvent *event) override;
+
+    // QQuickPaintedItem interface
+  public:
+    virtual void paint(QPainter *painter) override;
 };
